@@ -1,0 +1,8 @@
+
+width: 8
+height: 8
+x_start: 341
+y_start: 544
+offset: 64
+y_offset: 32
+

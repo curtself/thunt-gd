@@ -1,0 +1,248 @@
+extends Node2D
+
+# grid variables
+@export var width:int
+@export var height:int
+@export var x_start:int
+@export var y_start:int
+@export var offset:int
+
+# grid pieces
+var all_pieces = [];
+var possible_pieces = [
+	preload("res://scenes/piece_01_copper.tscn"),
+	preload("res://scenes/piece_02_blue.tscn"),
+	preload("res://scenes/piece_03_gold.tscn"),
+	preload("res://scenes/piece_04_bag.tscn")
+];
+var upgrade_path = [
+	preload("res://scenes/piece_01_copper.tscn"),
+	preload("res://scenes/piece_02_blue.tscn"),
+	preload("res://scenes/piece_03_gold.tscn"),
+	preload("res://scenes/piece_04_bag.tscn"),
+	preload("res://scenes/piece_05_chest.tscn"),
+	preload("res://scenes/piece_06_green_chest.tscn"),
+	preload("res://scenes/piece_07_red_chest.tscn"),
+	preload("res://scenes/piece_08_vault.tscn")
+];
+
+# touch variables
+var touch_start = Vector2(0,0);
+var touch_end = Vector2(0,0);
+var controlling = false;
+
+# Called when the node enters the scene tree for the first time.
+func _ready() -> void:
+	randomize();
+	all_pieces = make_2d_array();
+	spawn_pieces();
+
+func make_2d_array():
+	var array = [];
+	for i in width:
+		array.append([]);
+		for j in height:
+			array[i].append(null);
+	return array;
+
+func spawn_pieces():
+	for i in width:
+		for j in height:
+			# get random piece
+			var piece = possible_pieces[randi() % possible_pieces.size()].instantiate();
+			var loops = 0;
+			while (match_at(i,j,piece.identifier) && loops < 100):
+				#print("Found an existing match...");
+				piece = possible_pieces[randi() % possible_pieces.size()].instantiate();
+				loops += 1;
+			#print("Creating piece at " + str(i) + "," + str(j));
+			add_child(piece);
+			piece.position = grid_to_pixel(i,j);
+			piece.set_coords(i,j);
+			all_pieces[i][j] = piece;
+
+func match_at(i,j,piece_id):
+	var coords = str(i) + "," + str(j);
+	if i > 1:
+		if all_pieces[i-1][j] != null && all_pieces[i-2][j]:
+			if all_pieces[i-1][j].identifier == piece_id && all_pieces[i-2][j].identifier == piece_id:
+				#print("Matched a " + piece_id + " at " + coords);
+				return true;
+	if j > 1:
+		if all_pieces[i][j-1] != null && all_pieces[i][j-2]:
+			if all_pieces[i][j-1].identifier == piece_id && all_pieces[i][j-2].identifier == piece_id:
+				#print("Matched a " + piece_id + " at " + coords);
+				return true;
+	return false;
+
+func grid_to_pixel(column,row):
+	var new_x = x_start + offset * column;
+	var new_y = y_start + -offset * row;
+	#print("Converted " + str(column) + "," + str(row) + " to [" + str(new_x) + "," + str(new_y) + "]");
+	return Vector2(new_x,new_y);
+
+func pixel_to_grid(pixel_x,pixel_y):
+	var new_column = round((pixel_x - x_start) / offset);
+	var new_row = round((pixel_y - y_start) / -offset);
+	return Vector2(new_column,new_row);
+
+func is_in_grid(grid_position):
+	if grid_position.x >= 0 && grid_position.x < width:
+		if grid_position.y >= 0 && grid_position.y < height:
+			return true;
+	return false;
+
+func touch_input():
+	if Input.is_action_just_pressed("ui_touch"):
+		var mp = get_global_mouse_position();
+		if is_in_grid( pixel_to_grid(mp.x,mp.y)):
+			touch_start = pixel_to_grid(mp.x,mp.y);
+			controlling = true;
+	if Input.is_action_just_released("ui_touch"):
+		var mp = get_global_mouse_position();
+		if is_in_grid( pixel_to_grid(mp.x,mp.y)):
+			touch_end = pixel_to_grid(mp.x,mp.y);
+			if is_in_grid(touch_end) && controlling:
+				controlling = false;
+				touch_difference(touch_start,touch_end);
+
+func swap_pieces(grid_pos,direction):
+	var first_piece = all_pieces[grid_pos.x][grid_pos.y];
+	var other_piece = all_pieces[grid_pos.x+direction.x][grid_pos.y+direction.y];
+	# only try to swap if both are not null
+	if first_piece != null && other_piece != null:
+		all_pieces[grid_pos.x][grid_pos.y] = other_piece;
+		all_pieces[grid_pos.x+direction.x][grid_pos.y+direction.y] = first_piece;
+		first_piece.move(grid_to_pixel(grid_pos.x+direction.x,grid_pos.y+direction.y));
+		other_piece.move(grid_to_pixel(grid_pos.x,grid_pos.y));
+		# update coordinate values
+		first_piece.set_coords(other_piece.coords.x,other_piece.coords.y);
+		other_piece.set_coords(first_piece.coords.x,first_piece.coords.y);
+		first_piece.key_match = true;
+		print("Swapping, using " + str(first_piece.coords.x) + "," + str(first_piece.coords.y) + " as key");
+		get_parent().get_node("upgrade_timer").start();
+
+# get the direction between start and end touch points
+func get_direction(st,en):
+	var difference = en-st
+	if abs(difference.x) > abs(difference.y):
+		if difference.x > 0:
+			return Vector2(1,0);
+		elif difference.x < 0:
+			return Vector2(-1,0);
+	elif abs(difference.y) > abs(difference.x):
+		if difference.y > 0:
+			return Vector2(0,1);
+		elif difference.y < 0:
+			return Vector2(0,-1);
+	return Vector2(0,0);
+
+func touch_difference(st,en):
+	var direction = get_direction(st,en)
+	swap_pieces(st,direction);
+
+func find_matches():
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null:
+				var id = all_pieces[i][j].identifier;
+				if i > 0 && i < width-1:
+					# for key matches we will not destry the block but upgrade it
+					if all_pieces[i][j].key_match:
+						print("Found key match at " + str(i) + "," + str(j));
+					if all_pieces[i-1][j] != null && all_pieces[i+1][j] != null:
+						# horizontal matching
+						if all_pieces[i-1][j].identifier == id && all_pieces[i+1][j].identifier == id:
+							all_pieces[i-1][j].matched = true;
+							all_pieces[i-1][j].dim();
+							all_pieces[i][j].matched = true;
+							all_pieces[i][j].dim();
+							all_pieces[i+1][j].matched = true;
+							all_pieces[i+1][j].dim();
+							# we need to get all matches in a horizontal line and check if there is already a key
+							# if not then we need to create one
+							
+				if j > 0 && j < height-1:
+					if all_pieces[i][j-1] != null && all_pieces[i][j+1] != null:
+						# vertical matching
+						if all_pieces[i][j-1].identifier == id && all_pieces[i][j+1].identifier == id:
+							all_pieces[i][j-1].matched = true;
+							all_pieces[i][j-1].dim();
+							all_pieces[i][j].matched = true;
+							all_pieces[i][j].dim();
+							all_pieces[i][j+1].matched = true;
+							all_pieces[i][j+1].dim();
+							
+	get_parent().get_node("destroy_timer").start();
+
+func destroy_matched():
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] != null:
+				if all_pieces[i][j].matched:
+					var is_movable = all_pieces[i][j].is_movable;
+					var upgrade_index = all_pieces[i][j].upgrade_index;
+					if all_pieces[i][j].key_match != true:
+						all_pieces[i][j].queue_free();
+						print("Removing " + str(i) + "," + str(j));
+						all_pieces[i][j] = null;
+					else:
+						all_pieces[i][j].queue_free();
+						# upgrade the piece
+						if is_movable:
+							var upgrade_piece = upgrade_path[upgrade_index+1].instantiate();
+							upgrade_piece.position = grid_to_pixel(i,j);
+							upgrade_piece.set_coords(i,j);
+							all_pieces[i][j] = upgrade_piece;
+							add_child(upgrade_piece);
+							#queue_redraw();
+							print("Upgrade piece at " + str(i) + "," + str(j) + " from a " + all_pieces[i][j].identifier);
+					# remove the key match property
+					all_pieces[i][j].key_match = false;
+		get_parent().get_node("collapse_timer").start();
+
+func collapse_colums():
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] == null:
+				for k in range(j+1,height):
+					if all_pieces[i][k] != null:
+						all_pieces[i][k].move( grid_to_pixel(i,j));
+						all_pieces[i][j] = all_pieces[i][k];
+						all_pieces[i][k] = null;
+						break
+	get_parent().get_node("refill_timer").start();
+
+func refill_columns():
+	for i in width:
+		for j in height:
+			if all_pieces[i][j] == null:
+				# get random piece
+				var piece = possible_pieces[randi() % possible_pieces.size()].instantiate();
+				var loops = 0;
+				while (match_at(i,j,piece.identifier) && loops < 100):
+					#print("Found an existing match...");
+					piece = possible_pieces[randi() % possible_pieces.size()].instantiate();
+					loops += 1;
+				#print("Creating piece at " + str(i) + "," + str(j));
+				add_child(piece);
+				piece.position = grid_to_pixel(i,j);
+				piece.set_coords(i,j);
+				all_pieces[i][j] = piece;
+	find_matches()
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(_delta: float) -> void:
+	touch_input();
+
+func _on_destroy_timer_timeout() -> void:
+	destroy_matched();
+
+func _on_upgrade_timer_timeout() -> void:
+	find_matches();
+
+func _on_collapse_timer_timeout() -> void:
+	collapse_colums();
+
+func _on_refill_timer_timeout() -> void:
+	refill_columns();

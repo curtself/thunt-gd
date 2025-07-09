@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dq27rn5k5ff4u"]
+
+[ext_resource type="PackedScene" uid="uid://ce4alkig43akx" path="res://scenes/piece.tscn" id="1_vq580"]
+[ext_resource type="Texture2D" uid="uid://bjnqtbyxqy238" path="res://assets/pieces/piece_06_green_chest.png" id="2_3er63"]
+
+[node name="piece_06_green_chest" instance=ExtResource("1_vq580")]
+identifier = "GreenChest"
+upgrade_index = 5
+
+[node name="Sprite2D" parent="." index="0"]
+texture = ExtResource("2_3er63")

@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dmybf3h5kmru6"]
+
+[ext_resource type="PackedScene" uid="uid://ce4alkig43akx" path="res://scenes/piece.tscn" id="1_mmepd"]
+[ext_resource type="Texture2D" uid="uid://bwfuccil52qmu" path="res://assets/pieces/piece_01_copper.png" id="2_22pem"]
+
+[node name="piece_01_copper" instance=ExtResource("1_mmepd")]
+identifier = "Copper"
+upgrade_index = 0
+
+[node name="Sprite2D" parent="." index="0"]
+texture = ExtResource("2_22pem")

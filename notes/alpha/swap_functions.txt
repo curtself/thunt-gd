@@ -1,0 +1,33 @@
+func swap_pieces_bk_v2(grid_pos,direction):
+	var first_piece = all_pieces[grid_pos.x][grid_pos.y]
+	var other_piece = all_pieces[grid_pos.x + direction.x][grid_pos.y + direction.y]
+	if first_piece != null && other_piece != null:
+		all_pieces[grid_pos.x][grid_pos.y] = other_piece
+		all_pieces[grid_pos.x + direction.x][grid_pos.y + direction.y] = first_piece
+		first_piece.move(grid_to_pixel(grid_pos.x + direction.x, grid_pos.y + direction.y))
+		other_piece.move(grid_to_pixel(grid_pos.x, grid_pos.y))
+		# update coords
+		var temp_coords = first_piece.coords
+		first_piece.set_coords(other_piece.coords.x, other_piece.coords.y)
+		other_piece.set_coords(temp_coords.x, temp_coords.y)
+		# Only update timestamp of the piece the user moved (first_piece)
+		first_piece.update_touch_timestamp()
+		other_piece.update_touch_timestamp()
+		get_parent().get_node("upgrade_timer").start()
+
+func swap_pieces_bk_v1(grid_pos,direction):
+	var first_piece = all_pieces[grid_pos.x][grid_pos.y]
+	var other_piece = all_pieces[grid_pos.x+direction.x][grid_pos.y+direction.y]
+	if first_piece != null && other_piece != null:
+		all_pieces[grid_pos.x][grid_pos.y] = other_piece
+		all_pieces[grid_pos.x+direction.x][grid_pos.y+direction.y] = first_piece
+		first_piece.move(grid_to_pixel(grid_pos.x+direction.x,grid_pos.y+direction.y))
+		other_piece.move(grid_to_pixel(grid_pos.x,grid_pos.y))
+		# update coordinates
+		var temp_coords = first_piece.coords
+		first_piece.set_coords(other_piece.coords.x, other_piece.coords.y)
+		other_piece.set_coords(temp_coords.x, temp_coords.y)
+		# update timestamps
+		first_piece.update_touch_timestamp()
+		other_piece.update_touch_timestamp()
+		get_parent().get_node("upgrade_timer").start()

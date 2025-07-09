@@ -1,0 +1,21 @@
+
+Simi-working gameplay with bugs.
+
+Needs attention:
+	Key match detections
+		User matches should ALWAYS use the piece that was moved by the user.
+		Cascading matches can use mid-point pieces as key matches.
+
+	Gameplay timers need to be reworked.
+		Currently is buggy when upgrades match.
+		Also sometimes refills happen before pieces collapse. I this is because 
+			collapse_pieces gets called too many times. Check the console while
+			speed matching and see how many debug statements there are for collapse_pieces
+			
+width: 8
+height: 8
+x_start: 342
+y_start: 549
+offset: 64
+y_offset:
+starting_moves: 15

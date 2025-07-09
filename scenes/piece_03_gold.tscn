@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3 uid="uid://dljitdskk6ps3"]
+
+[ext_resource type="PackedScene" uid="uid://ce4alkig43akx" path="res://scenes/piece.tscn" id="1_7bc7b"]
+[ext_resource type="Texture2D" uid="uid://cb7kv0yr03wvs" path="res://assets/pieces/piece_03_gold.png" id="2_vjwj8"]
+
+[node name="piece_03_gold" instance=ExtResource("1_7bc7b")]
+identifier = "Gold"
+upgrade_index = 2
+
+[node name="Sprite2D" parent="." index="0"]
+texture = ExtResource("2_vjwj8")

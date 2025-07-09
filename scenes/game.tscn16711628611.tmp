@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3 uid="uid://cx7qm8fcyka8l"]
+
+[ext_resource type="Texture2D" uid="uid://bb5sdsk2kphw5" path="res://assets/background.png" id="1_uwrxv"]
+[ext_resource type="Script" uid="uid://dm3egt4w7ae77" path="res://scripts/grid.gd" id="2_yqjtg"]
+
+[node name="Game" type="Node2D"]
+
+[node name="background" type="TextureRect" parent="."]
+offset_right = 40.0
+offset_bottom = 40.0
+texture = ExtResource("1_uwrxv")
+
+[node name="grid" type="Node2D" parent="."]
+script = ExtResource("2_yqjtg")
+width = 8
+height = 8
+x_start = 346
+y_start = 546
+offset = 64
