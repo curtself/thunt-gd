@@ -1,6 +1,6 @@
 
 Semi-working gameplay with bugs.
-
+(small change)
 
 Starting offset variables
 width: 8
