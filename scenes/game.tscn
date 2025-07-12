@@ -58,19 +58,3 @@ offset = 64
 y_offset = 64
 starting_moves = 40
 common_timeout = 0.08
-
-[node name="destroy_timer" type="Timer" parent="."]
-wait_time = 0.1
-one_shot = true
-
-[node name="upgrade_timer" type="Timer" parent="."]
-wait_time = 0.1
-one_shot = true
-
-[node name="collapse_timer" type="Timer" parent="."]
-wait_time = 0.3
-one_shot = true
-
-[node name="refill_timer" type="Timer" parent="."]
-wait_time = 0.2
-one_shot = true

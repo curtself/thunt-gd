@@ -37,6 +37,7 @@ var upgrade_path = [
 	preload("res://scenes/piece_08_vault.tscn")
 ];
 const Match3Core = preload("res://scripts/match3core.gd")
+const pause_menu_scene = preload("res://scenes/pause.tscn")
 
 # touch variables
 var touch_start = Vector2(0,0)
@@ -50,7 +51,6 @@ var moves_remaining
 var moves_remaining_label
 
 # timing
-var timing_mode = "manual"
 @export var common_timeout:float = 0.05
 
 func _ready():
@@ -175,12 +175,9 @@ func swap_pieces(grid_pos, direction):
 			first_piece.update_touch_timestamp();
 			other_piece.update_touch_timestamp();
 
-			if timing_mode == "timer":
-				get_parent().get_node("upgrade_timer").start()
-			else:
-				print("manual trigger for find_matches");
-				await get_tree().create_timer(common_timeout).timeout;
-				find_matches();
+			print("manual trigger for find_matches");
+			await get_tree().create_timer(common_timeout).timeout;
+			find_matches();
 		else:
 			# Invalid move; revert swap
 			all_pieces[grid_pos.x][grid_pos.y] = first_piece
@@ -220,47 +217,6 @@ func get_direction(st,en):
 func touch_difference(st,en):
 	swap_pieces(st,get_direction(st,en))
 
-func touch_input():
-	# normal game input
-	if Input.is_action_just_pressed("ui_touch"):
-		var mp = get_global_mouse_position()
-		if is_in_grid(pixel_to_grid(mp.x,mp.y)):
-			touch_start = pixel_to_grid(mp.x,mp.y)
-			controlling = true
-	if Input.is_action_just_released("ui_touch"):
-		var mp = get_global_mouse_position()
-		if is_in_grid(pixel_to_grid(mp.x,mp.y)):
-			touch_end = pixel_to_grid(mp.x,mp.y)
-			if controlling:
-				controlling = false
-				touch_difference(touch_start,touch_end)
-
-	# dev stuff
-	if Input.is_action_just_released("ui_devclick"):
-		var mp = get_global_mouse_position()
-		var grid_clicked = pixel_to_grid(mp.x,mp.y)
-		print("Dev clicked on " + str(grid_clicked))
-		# Check for number keys 1-8 (KEY_1 = 49 in Godot 4)
-		for i in range(1, 9):
-			if Input.is_key_pressed(KEY_0 + i):
-				print("Number key " + str(i) + " held while dev clicking.")
-				
-				# Change piece at clicked coords to the specified type
-				change_piece_to_type(grid_clicked, i)		
-
-func menu_check() -> void:
-	if Input.is_action_just_pressed("ui_player_menu"):
-		if state != menu:
-			# store state and open menu
-			print("open menu")
-			menu_pop_state = state
-			state = menu
-		else:
-			# restore state and close menu
-			print("close menu")
-			state = menu_pop_state
-			menu_pop_state = null
-	pass
 # dedupe an array
 func get_unique(arr: Array) -> Array:
 	var seen = {}
@@ -274,50 +230,6 @@ func get_unique(arr: Array) -> Array:
 # ----------------
 # MATCH DETECTION
 # ----------------
-
-func check_all_matches():
-	var groups = []
-	var visited = []
-	for i in width:
-		visited.append([])
-		for j in height:
-			visited[i].append(false)
-	
-	for i in width:
-		for j in height:
-			if not visited[i][j] and all_pieces[i][j] != null:
-				var match_group = flood_fill(i, j, visited)
-				if match_group.pieces.size() >= 3:
-					groups.append(match_group)
-	return groups
-
-func flood_fill(i, j, visited):
-	print("Flood fill starting at (", i, ",", j, ") with id ", all_pieces[i][j].identifier)
-	var group = MatchGroup.new(touch_start, touch_end)
-	var to_visit = [Vector2i(i, j)]
-	var piece_id = all_pieces[i][j].identifier
-
-	while to_visit.size() > 0:
-		var pos = to_visit.pop_back()
-		var x = pos.x
-		var y = pos.y
-
-		if x < 0 or x >= width or y < 0 or y >= height:
-			continue
-		if visited[x][y]:
-			continue
-		if all_pieces[x][y] == null or all_pieces[x][y].identifier != piece_id:
-			continue
-
-		visited[x][y] = true
-		group.add_piece(all_pieces[x][y])
-
-		# Check neighbors (4-directional)
-		to_visit.append(Vector2i(x+1, y))
-		to_visit.append(Vector2i(x-1, y))
-		to_visit.append(Vector2i(x, y+1))
-		to_visit.append(Vector2i(x, y-1))
-	return group
 
 # match3core version
 func find_matches():
@@ -347,86 +259,14 @@ func find_matches():
 		if matched_size > max_match_size_in_turn:
 			max_match_size_in_turn = matched_size
 
-		if timing_mode == "timers":
-			upgrade_and_destroy()
-		else:
-			print("manual trigger for upgrade/destroy");
-			await get_tree().create_timer(common_timeout).timeout;
-			upgrade_and_destroy()
+		print("manual trigger for upgrade/destroy");
+		await get_tree().create_timer(common_timeout).timeout;
+		upgrade_and_destroy()
 	else:
-		if timing_mode == "timers":
-			get_parent().get_node("collapse_timer").start()
-		else:
-			print("manual trigger for collapse")
-			await get_tree().create_timer(common_timeout).timeout;
-			board_scan_reset()
-			collapse_colums()
-
-func check_horizontal_matches():
-	var groups = []
-	for j in height:
-		var run = []
-		var last_id = ""
-		for i in width:
-			var piece = all_pieces[i][j]
-			if piece != null:
-				if piece.identifier == last_id:
-					run.append(piece)
-				else:
-					if run.size() >= 3:
-						var group = MatchGroup.new(touch_start,touch_end)
-						for p in run:
-							group.add_piece(p)
-						groups.append(group)
-					run = [piece]
-					last_id = piece.identifier
-			else:
-				if run.size() >= 3:
-					var group = MatchGroup.new(touch_start,touch_end)
-					for p in run:
-						group.add_piece(p)
-					groups.append(group)
-				run = []
-				last_id = ""
-		if run.size() >= 3:
-			var group = MatchGroup.new(touch_start,touch_end)
-			for p in run:
-				group.add_piece(p)
-			groups.append(group)
-	return groups
-
-func check_vertical_matches():
-	var groups = []
-	for i in width:
-		var run = []
-		var last_id = ""
-		for j in height:
-			var piece = all_pieces[i][j]
-			if piece != null:
-				if piece.identifier == last_id:
-					run.append(piece)
-				else:
-					if run.size() >= 3:
-						var group = MatchGroup.new(touch_start,touch_end)
-						for p in run:
-							group.add_piece(p)
-						groups.append(group)
-					run = [piece]
-					last_id = piece.identifier
-			else:
-				if run.size() >= 3:
-					var group = MatchGroup.new(touch_start,touch_end)
-					for p in run:
-						group.add_piece(p)
-					groups.append(group)
-				run = []
-				last_id = ""
-		if run.size() >= 3:
-			var group = MatchGroup.new(touch_start,touch_end)
-			for p in run:
-				group.add_piece(p)
-			groups.append(group)
-	return groups
+		print("manual trigger for collapse")
+		await get_tree().create_timer(common_timeout).timeout;
+		board_scan_reset()
+		collapse_colums()
 
 func upgrade_and_destroy():
 	var upgrade_happened = false;
@@ -470,13 +310,10 @@ func upgrade_and_destroy():
 		await get_tree().create_timer(common_timeout).timeout		# check for new matches on the upgraded piece
 		find_matches();
 	else:
-		if timing_mode == "timers":
-			get_parent().get_node("collapse_timer").start()
-		else:
-			print("manual trigger for collapse")
-			await get_tree().create_timer(common_timeout).timeout;
-			board_scan_reset()
-			collapse_colums()
+		print("manual trigger for collapse")
+		await get_tree().create_timer(common_timeout).timeout;
+		board_scan_reset()
+		collapse_colums()
 
 func collapse_colums():
 	#board_scan_reset();
@@ -496,12 +333,9 @@ func collapse_colums():
 							# clear temp/moving piece after assigned to landing place
 							all_pieces[i][k] = null;
 							break
-		if timing_mode == "timers":
-			get_parent().get_node("refill_timer").start();
-		else:
-			print("manual trigger for refill")
-			await get_tree().create_timer(common_timeout).timeout;
-			refill_columns()
+		print("manual trigger for refill")
+		await get_tree().create_timer(common_timeout).timeout;
+		refill_columns()
 
 	else:
 		# APPLY SCORING HERE at end of turn
@@ -555,19 +389,60 @@ func refill_columns():
 	await get_tree().create_timer(common_timeout).timeout;
 	find_matches()
 
-# not used since refactoring key match upgrade match timing
-#func _on_destroy_timer_timeout():
-#	upgrade_and_destroy()
+func touch_input():
+	# normal game input
+	if Input.is_action_just_pressed("ui_touch"):
+		var mp = get_global_mouse_position()
+		if is_in_grid(pixel_to_grid(mp.x,mp.y)):
+			touch_start = pixel_to_grid(mp.x,mp.y)
+			controlling = true
+	if Input.is_action_just_released("ui_touch"):
+		var mp = get_global_mouse_position()
+		if is_in_grid(pixel_to_grid(mp.x,mp.y)):
+			touch_end = pixel_to_grid(mp.x,mp.y)
+			if controlling:
+				controlling = false
+				touch_difference(touch_start,touch_end)
 
-func _on_upgrade_timer_timeout():
-	find_matches()
+	# dev stuff
+	if Input.is_action_just_released("ui_devclick"):
+		var mp = get_global_mouse_position()
+		var grid_clicked = pixel_to_grid(mp.x,mp.y)
+		print("Dev clicked on " + str(grid_clicked))
+		# Check for number keys 1-8 (KEY_1 = 49 in Godot 4)
+		for i in range(1, 9):
+			if Input.is_key_pressed(KEY_0 + i):
+				print("Number key " + str(i) + " held while dev clicking.")
+				
+				# Change piece at clicked coords to the specified type
+				change_piece_to_type(grid_clicked, i)
 
-func _on_collapse_timer_timeout():
-	board_scan_reset();
-	collapse_colums();
+func menu_check() -> void:
+	if Input.is_action_just_pressed("ui_player_menu"):
+		if state != menu:
+			menu_open()
+		else:
+			menu_close()
 
-func _on_refill_timer_timeout():
-	refill_columns()
+func menu_open() -> void:
+	# store state and open menu
+	print("open menu")
+	menu_pop_state = state
+	state = menu
+	var pause_menu = pause_menu_scene.instantiate();
+	get_tree().get_root().add_child(pause_menu)
+	pause_menu.connect("resume_clicked",_on_resume_clicked)
+
+func menu_close() -> void:
+	# restore state and close menu
+	print("close menu")
+	state = menu_pop_state
+	menu_pop_state = null
+	for node in get_tree().get_nodes_in_group("PauseMenu"):
+		node.queue_free()
+
+func _on_resume_clicked() -> void:
+	menu_close()
 
 func update_ui():
 	if current_move_label != null:

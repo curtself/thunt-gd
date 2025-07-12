@@ -49,3 +49,17 @@ func clear_touch_timestamp():
 # print friendly view
 func _to_string():
 	return "[" + str(coords.x) + "," + str(coords.y) + "]:" + identifier
+
+# persist data
+func save() -> void:
+	var save_dict = {
+		"filename": get_scene_file_path(),
+		"parent": get_parent().get_path(),
+		"pos_x": position.x,
+		"pos_y": position.y,
+		"coords_x": coords.x,
+		"coords_y": coords.y,
+		"identifier": identifier,
+		"touch_timestamp": touch_timestamp
+	}
+	pass

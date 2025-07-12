@@ -1,5 +1,6 @@
 extends Control
 
+signal resume_clicked
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
@@ -13,7 +14,7 @@ func _ready() -> void:
 
 func _on_resume_button_pressed() -> void:
 	# this will need to hide/destroy itself
-	pass 
+	emit_signal("resume_clicked")
 
 
 func _on_settings_button_pressed() -> void:
