@@ -99,7 +99,23 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_yqeox")
 theme_override_styles/hover = SubResource("StyleBoxFlat_con2f")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_mhnvy")
 theme_override_styles/normal = SubResource("StyleBoxFlat_4h3mk")
-text = "Start"
+text = "New Game"
+
+[node name="resume_button" type="Button" parent="VBoxContainer"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_hover_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 30
+theme_override_styles/focus = SubResource("StyleBoxEmpty_yqeox")
+theme_override_styles/hover = SubResource("StyleBoxFlat_con2f")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_mhnvy")
+theme_override_styles/normal = SubResource("StyleBoxFlat_4h3mk")
+text = "Resume"
 
 [node name="settings_button" type="Button" parent="VBoxContainer"]
 layout_mode = 2
@@ -133,5 +149,6 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_vjb58")
 text = "Quit"
 
 [connection signal="pressed" from="VBoxContainer/start_button" to="." method="_on_start_button_pressed"]
+[connection signal="pressed" from="VBoxContainer/resume_button" to="." method="_on_resume_button_pressed"]
 [connection signal="pressed" from="VBoxContainer/settings_button" to="." method="_on_settings_button_pressed"]
 [connection signal="pressed" from="VBoxContainer/quit_button" to="." method="_on_quit_button_pressed"]

@@ -54,21 +54,33 @@ var moves_remaining_label
 @export var common_timeout:float = 0.05
 
 func _ready():
-	# use starting moves from global settings instead of property here
-	starting_moves = GlobalSettings.starting_moves
-	# use common_timeout from global settings
-	common_timeout = GlobalSettings.common_timeout
+	# regardless of load or new, we need a board size and initial state
 	state = move
 	all_pieces = make_2d_array()
 	# set board size
 	board_size_max = width * height;
-	spawn_pieces()
-	# set starting score and counter
-	moves_remaining = starting_moves
-	current_move = 1
+	# reference the labels
 	current_move_label = get_parent().get_node("CanvasLayer/CurrentMoveLabel")
 	moves_remaining_label = get_parent().get_node("CanvasLayer/MovesRemainingLabel")
-	update_ui()
+	
+	if GlobalSettings.load_save:
+		if FileAccess.file_exists("user://savegame.save"):
+			print("found save data!!!")
+		print("loading save state...")
+		# make sure the board exists in some state
+		load_state()
+	else:
+		# start game from scratch...
+		print("starting new game...")
+		# use starting moves from global settings instead of property here
+		starting_moves = GlobalSettings.starting_moves
+		# use common_timeout from global settings
+		common_timeout = GlobalSettings.common_timeout
+		spawn_pieces()
+		# set starting score and counter
+		moves_remaining = starting_moves
+		current_move = 1
+		update_ui()
 
 func make_2d_array():
 	var array = []
@@ -113,6 +125,7 @@ func pixel_to_grid(pixel_x,pixel_y):
 func is_in_grid(grid_position):
 	return grid_position.x >= 0 && grid_position.x < width && grid_position.y >= 0 && grid_position.y < height
 
+# debug/test function. will change a piece to a specified piece ID
 func change_piece_to_type(grid_pos: Vector2i, type_num: int):
 	# Safety checks
 	if grid_pos.x < 0 or grid_pos.x >= width or grid_pos.y < 0 or grid_pos.y >= height:
@@ -214,7 +227,9 @@ func get_direction(st,en):
 		return Vector2(0,sign(difference.y))
 	return Vector2(0,0)
 
+# TODO: consider removing to just call swap_pieces
 func touch_difference(st,en):
+	print("touch difference called")
 	swap_pieces(st,get_direction(st,en))
 
 # dedupe an array
@@ -389,6 +404,10 @@ func refill_columns():
 	await get_tree().create_timer(common_timeout).timeout;
 	find_matches()
 
+# ----------------
+# INPUT/UI HANDLING
+# ----------------
+
 func touch_input():
 	# normal game input
 	if Input.is_action_just_pressed("ui_touch"):
@@ -417,6 +436,11 @@ func touch_input():
 				# Change piece at clicked coords to the specified type
 				change_piece_to_type(grid_clicked, i)
 
+	if Input.is_action_just_pressed("ui_load_state"):
+		if state == move:
+			print("attempting to load saved state!")
+			load_state()
+
 func menu_check() -> void:
 	if Input.is_action_just_pressed("ui_player_menu"):
 		if state != menu:
@@ -432,6 +456,7 @@ func menu_open() -> void:
 	var pause_menu = pause_menu_scene.instantiate();
 	get_tree().get_root().add_child(pause_menu)
 	pause_menu.connect("resume_clicked",_on_resume_clicked)
+	pause_menu.connect("home_clicked",_on_home_clicked)
 
 func menu_close() -> void:
 	# restore state and close menu
@@ -441,8 +466,12 @@ func menu_close() -> void:
 	for node in get_tree().get_nodes_in_group("PauseMenu"):
 		node.queue_free()
 
+# menu signals
 func _on_resume_clicked() -> void:
 	menu_close()
+
+func _on_home_clicked() -> void:
+	save_state()
 
 func update_ui():
 	if current_move_label != null:
@@ -461,6 +490,89 @@ func end_game():
 	current_move_label.text = "Total: " + str(current_move)
 	moves_remaining_label.text = "GAME OVER  "
 	state = end;
+
+# save the important parts of this game
+func save_state() -> void:
+	# current game state, excluding pieces
+	var grid_settings = {
+		'current_move': current_move,
+		"moves_remaining": moves_remaining,
+		"common_timeout": common_timeout
+	}
+	var save_nodes = get_tree().get_nodes_in_group("Persist")
+	print("Saving " + str(save_nodes.size()) + " pieces")
+	var save_file = FileAccess.open("user://savegame.save",FileAccess.WRITE)
+	print("Saving to file: %s" % save_file.get_path())
+	# first save the grid settings, then the pieces
+	save_file.store_line( JSON.stringify(grid_settings) )
+	for node in save_nodes:
+		if node.scene_file_path.is_empty():
+			print("skipping instance of %s node since it is not instantiated" % node.name)
+			continue
+		# ensure the node can be saved
+		if !node.has_method("save"):
+			print("node %s does not have a save function" % node.name)
+			continue
+		
+		# get the save data
+		var node_data = node.call("save")
+		var json_string = JSON.stringify(node_data)
+		save_file.store_line(json_string)
+
+func load_state() -> void:
+	if !FileAccess.file_exists("user://savegame.save"):
+		print("no save data found!!!")
+		return
+	
+	# if we are in an active game we need to ensure all 
+	# 'Persist' objects are removed before we add them again
+	var save_nodes = get_tree().get_nodes_in_group("Persist")
+	for node in save_nodes:
+		node.queue_free()
+	# clear the board/grid
+	for i in width:
+		for j in height:
+			all_pieces[i][j] = null
+	
+	var save_file = FileAccess.open("user://savegame.save",FileAccess.READ)
+	while save_file.get_position() < save_file.get_length():
+		var json_string = save_file.get_line()
+		var json = JSON.new()
+		var parse_result = json.parse(json_string)
+		if !parse_result == OK:
+			print("JSON Parse Error: ", json.get_error_message(), " in ", json_string, " at line ", json.get_error_line())
+			continue
+		var node_data = json.data
+		# we need to check if this is a piece or a game state object
+		# we will use the 'in' test for this
+		if ! "coords_x" in node_data:
+			# game state
+			print("game state found: ", json_string)
+			common_timeout = node_data["common_timeout"]
+			current_move = int(node_data["current_move"])
+			moves_remaining = int(node_data["moves_remaining"])
+			state = wait
+		else:
+			# a piece
+			var new_object = load(node_data["filename"]).instantiate()
+			# position and coords are Vector2 so they need special handling
+			new_object.position = Vector2(node_data["pos_x"], node_data["pos_y"])
+			var grid_x = int(node_data["coords_x"])
+			var grid_y = int(node_data["coords_y"])
+			new_object.call("set_coords", grid_x, grid_y)
+			all_pieces[grid_x][grid_y] = new_object
+			# special cases
+			var specs = ["pos_x","pos_y","coords_x","coords_y","filename"]
+			for i in node_data.keys():
+				# only set the attribute if it is NOT in the specs list
+				if ! specs.has(i):
+					new_object.set(i, node_data[i])
+			#get_node(node_data["parent"]).add_child(new_object)
+			add_child(new_object)
+			#print("added piece: ", str(new_object))
+	
+	update_ui()
+	find_matches()
 
 func _process(_delta):
 	if state == move:

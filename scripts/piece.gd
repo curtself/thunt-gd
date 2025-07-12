@@ -11,8 +11,8 @@ var coords = Vector2(0,0);
 var touch_timestamp: int = 0;
 
 # Called when the node enters the scene tree for the first time.
-func _ready() -> void:
-	pass;
+#func _ready() -> void:
+#	pass;
 	
 func set_coords(column,row):
 	coords = Vector2(column,row);
@@ -51,7 +51,7 @@ func _to_string():
 	return "[" + str(coords.x) + "," + str(coords.y) + "]:" + identifier
 
 # persist data
-func save() -> void:
+func save():
 	var save_dict = {
 		"filename": get_scene_file_path(),
 		"parent": get_parent().get_path(),
@@ -62,4 +62,4 @@ func save() -> void:
 		"identifier": identifier,
 		"touch_timestamp": touch_timestamp
 	}
-	pass
+	return save_dict
