@@ -38,6 +38,7 @@ var upgrade_path = [
 ];
 const Match3Core = preload("res://scripts/match3core.gd")
 const pause_menu_scene = preload("res://scenes/pause.tscn")
+const game_over_scene = preload("res://scenes/game_over.tscn")
 
 # touch variables
 var touch_start = Vector2(0,0)
@@ -453,10 +454,12 @@ func menu_open() -> void:
 	print("open menu")
 	menu_pop_state = state
 	state = menu
+	# create pause menu and connect signals
 	var pause_menu = pause_menu_scene.instantiate();
 	get_tree().get_root().add_child(pause_menu)
 	pause_menu.connect("resume_clicked",_on_resume_clicked)
 	pause_menu.connect("home_clicked",_on_home_clicked)
+	pause_menu.connect("settings_clicked",_on_settings_clicked)
 
 func menu_close() -> void:
 	# restore state and close menu
@@ -466,12 +469,24 @@ func menu_close() -> void:
 	for node in get_tree().get_nodes_in_group("PauseMenu"):
 		node.queue_free()
 
-# menu signals
+# ----------------------------
+# pause menu signal handlers
+# ----------------------------
+
 func _on_resume_clicked() -> void:
 	menu_close()
 
 func _on_home_clicked() -> void:
 	save_state()
+	get_tree().change_scene_to_file("res://scenes/menu.tscn")
+
+func _on_settings_clicked() -> void:
+	save_state()
+	get_tree().change_scene_to_file("res://scenes/settings.tscn")
+
+func _on_pause_button_pressed() -> void:
+	Input.action_press("ui_player_menu")
+	Input.action_release("ui_player_menu")
 
 func update_ui():
 	if current_move_label != null:
@@ -490,8 +505,16 @@ func end_game():
 	current_move_label.text = "Total: " + str(current_move)
 	moves_remaining_label.text = "GAME OVER  "
 	state = end;
+	clear_state()
+	# create game over menu
+	#var game_over_menu = game_over_scene.instantiate();
+	#get_tree().get_root().add_child(game_over_menu)
+	# change to game over menu
+	get_tree().change_scene_to_file("res://scenes/game_over.tscn")
 
-# save the important parts of this game
+# --------------------
+# GAME STATE HANDLERS
+# --------------------
 func save_state() -> void:
 	# current game state, excluding pieces
 	var grid_settings = {
@@ -573,6 +596,10 @@ func load_state() -> void:
 	
 	update_ui()
 	find_matches()
+
+func clear_state() -> void:
+	print("removing save file")
+	DirAccess.remove_absolute("user://savegame.save")
 
 func _process(_delta):
 	if state == move:

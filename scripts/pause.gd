@@ -2,6 +2,7 @@ extends Control
 
 signal resume_clicked
 signal home_clicked
+signal settings_clicked
 
 # Called when the node enters the scene tree for the first time.
 #func _ready() -> void:
@@ -16,8 +17,8 @@ func _on_resume_button_pressed() -> void:
 	emit_signal("resume_clicked")
 
 func _on_settings_button_pressed() -> void:
-	# bring up the settings menu after saving state
-	pass
+	# just pass control back to game script to handle saving state and changing scenes
+	emit_signal("settings_clicked")
 
 func _on_home_button_pressed() -> void:
 	# save state and change scene to ui_menu

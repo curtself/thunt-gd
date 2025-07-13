@@ -8,6 +8,17 @@
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
+[node name="pause_button" type="Button" parent="CanvasLayer"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 17.0
+offset_top = -67.0
+offset_right = 70.0
+offset_bottom = -36.0
+grow_vertical = 0
+text = "Menu"
+
 [node name="CurrentMoveLabel" type="Label" parent="CanvasLayer"]
 anchors_preset = 4
 anchor_top = 0.5
@@ -58,3 +69,5 @@ offset = 64
 y_offset = 64
 starting_moves = 40
 common_timeout = 0.08
+
+[connection signal="pressed" from="CanvasLayer/pause_button" to="grid" method="_on_pause_button_pressed"]

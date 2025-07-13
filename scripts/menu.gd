@@ -5,7 +5,6 @@ extends Control
 func _ready() -> void:
 	if FileAccess.file_exists("user://savegame.save"):
 		$VBoxContainer/resume_button.show()
-	pass # Replace with function body.
 
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
